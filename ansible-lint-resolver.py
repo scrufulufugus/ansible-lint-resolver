@@ -40,6 +40,9 @@ def process_known_buckets(buckets: dict):
     if FQCNS and buckets.get('fqcn[action]'):
         for issue in buckets['fqcn[action]']:
             process_fqcn(issue)
+    if buckets.get('yaml[indentation]'):
+        for issue in buckets['yaml[indentation]']:
+            process_indentation(issue)
 
 def process_truthy(issue: dict):
     truthy_dict = {
@@ -124,6 +127,21 @@ def process_fqcn(issue: dict):
     sub_val = get_fqcn(match.group('key'))
     if sub_val:
         lines[loc] = KEY_VAL_RE.sub(r"\g<pre>{}\g<div>\g<value>\g<post>".format(sub_val), lines[loc])
+
+    with open(issue['location']['path'], 'w') as f:
+        f.writelines(lines)
+
+# FIXME: Can't indent following lines and indents "by at least \d+"
+def process_indentation(issue: dict):
+    loc = issue['location']['lines']['begin']-1
+    with open(issue['location']['path'], 'r') as f:
+        lines = f.readlines()
+    print(issue)
+    match = re.match(r"Wrong indentation: expected (?P<exp>\d+) but found (?P<act>\d+)",
+                     issue['description'])
+    lines[loc] = re.sub(r"^ {{}}".format(match.group('act')),
+                        r"^ {{}}".format(match.group('exp')),
+                        lines[loc])
 
     with open(issue['location']['path'], 'w') as f:
         f.writelines(lines)
